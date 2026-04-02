@@ -10,13 +10,7 @@
 #include <QDir>
 
 
-static QString getPath() {
-    // 假设这是你的相对路径
-    QString relativePath = "../input.mp4";
-    // 方法 A: 如果路径是相对于当前工作目录 (Current Working Directory)
-    QFileInfo fileInfo(relativePath);
-    return fileInfo.absoluteFilePath();
-}
+
 static QString getVcpkgPath() {
     QProcess process;
     QString program;

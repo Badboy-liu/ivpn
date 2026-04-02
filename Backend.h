@@ -27,18 +27,54 @@ class Backend : public QObject
 {
     Q_OBJECT
 public:
+    explicit Backend(QObject* parent = nullptr)
+        : QObject(parent)
+    {
+        connect(&manager, &QNetworkAccessManager::finished,
+                this, &Backend::onReplyFinished);
+    }
+
     Q_INVOKABLE QString convert(QString input, QString target);
     Q_INVOKABLE QString genQr(const QString& text);
 
     Q_INVOKABLE void loadSubscription(const QString& url);
     Q_INVOKABLE void startSpeedTest();
 signals:
-    void nodesUpdated(QStringList list);
+    void nodesUpdated(QStringList list,QStringList nodeList);
     void speedProgress(int current, int total);
     void speedFinished();
+
+private slots:
+    void onReplyFinished(QNetworkReply* reply) {
+    QByteArray raw = reply->readAll();
+    reply->deleteLater();
+
+    nodes.clear();
+    QByteArray decoded = QByteArray::fromBase64(raw);
+    QString text = QString::fromUtf8(decoded);
+
+    for (auto line : text.split("\n")) {
+        line = line.trimmed();
+        if (line.isEmpty()) continue;
+
+        nodes.append(parse(line));
+    }
+
+    QStringList list;
+    QStringList nodeList;
+    for (auto& n : nodes) {
+        list << n.name + " (" + n.server + ")";
+        nodeList<<toVless(n);
+    }
+
+
+
+    // convert(text,"vmess");
+    emit nodesUpdated(list,nodeList);
+}
 private:
     QList<Node> nodes;
-
+    QNetworkAccessManager manager;
     Node parse(const QString& link);
     QString toTarget(const Node& n, const QString& target);
 

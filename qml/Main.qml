@@ -15,11 +15,17 @@ ApplicationWindow {
     Connections {
         target: backend
 
-        function onNodesUpdated(list) {
+        function onNodesUpdated(list,nodeList) {
             listView.model = list
+            if(list.length > 0) {
+                currentNode = list[0]
+                qrImage.source = backend.genQr(list[0]) + "&t=" + Date.now()
+            }
+            input.text = nodeList.join("\n");
         }
 
         function onSpeedProgress(cur, total) {
+            console.log("cur="+cur+"total="+total)
             progress.value = total > 0 ? (cur / total * 100) : 0
         }
     }
@@ -46,6 +52,7 @@ ApplicationWindow {
                 placeholderText: "输入订阅链接（支持 base64 / clash / sing-box）"
                 Layout.fillWidth: true
                 Layout.minimumHeight: 30
+                implicitHeight: 30 // 或根据需要调整
             }
 
             Button {
@@ -92,6 +99,7 @@ ApplicationWindow {
                 Layout.fillWidth: true
                 model: ["vmess","vless","trojan", "ss", "ssr","hy2","hysteria","tuic","wg"]
                 Layout.minimumHeight: 30
+                implicitHeight: 30
             }
 
             Button {
@@ -149,6 +157,8 @@ ApplicationWindow {
                             text: modelData
                             wrapMode: Text.Wrap
                             font.pixelSize: 12
+                            textFormat: Text.RichText   // 允许显示 HTML
+
                         }
 
                         MouseArea {

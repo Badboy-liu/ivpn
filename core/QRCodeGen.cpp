@@ -3,6 +3,8 @@
 //
 
 #include "QRCodeGen.h"
+
+#include <iostream>
 #include <ZXing/MultiFormatWriter.h>
 #include <ZXing/BitMatrix.h>
 
@@ -36,8 +38,15 @@ using namespace ZXing;
 
 QString QRCodeGen::generateBase64(const QString& text)
 {
+    std::string utf8Text = text.toUtf8().toStdString();
     MultiFormatWriter writer(BarcodeFormat::QRCode);
-    auto matrix = writer.encode(text.toStdString(), 256, 256);
+    BitMatrix matrix;
+    try {
+        matrix = writer.encode(utf8Text, 256, 256);
+    }catch (std::exception& e) {
+        std::cerr << e.what() << std::endl;
+    }
+
 
     QImage img(256, 256, QImage::Format_RGB888);
     img.fill(Qt::white);

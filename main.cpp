@@ -40,6 +40,7 @@ int main(int argc, char *argv[])
     qDebug() << "QML Path:" << qmlPath;
     // ❗ 关键：DLL 依赖路径
     qputenv("PATH",QByteArray(binPath.toLocal8Bit()+";") +qgetenv("PATH"));
+    QCoreApplication::addLibraryPath(pluginPath);
 
     QQmlApplicationEngine engine;
     engine.addImportPath(qmlPath);

@@ -17,7 +17,7 @@ struct Node {
     QString name;
     QString server;
     int port = 0;
-
+    int latency = -1; // 默认未测速
     QString uuid;
     QString password;
     QString method;    // ss 用

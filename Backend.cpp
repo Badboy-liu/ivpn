@@ -58,49 +58,63 @@ int Backend::testLatency(const Node& n) {
 
     return 9999;
 }
+
 void Backend::startSpeedTest() {
-    int total = nodes.size();
+    qDebug() << "Start speedtest";
+    QtConcurrent::run([this]() {
+        int total = nodes.size();
+        for (int i = 0; i < total; ++i) {
+            int ms = testLatency(nodes[i]);
 
-    auto future = QtConcurrent::mapped(nodes, [=](Node n) {
-        return testLatency(n);
+            nodes[i].latency = ms;
+
+            // 更新节点名称显示
+            QStringList displayList;
+            QStringList nodeList;
+
+            for (auto &n: nodes) {
+                QString s = n.name + " (" + n.server + ")";
+                if (n.latency >= 0) {
+                    s += " <span style='color:green;'>[" + QString::number(n.latency) + "ms]</span>";
+                    displayList.append(s);
+                }
+
+                nodeList << toVless(n);
+            }
+
+            emit speedProgress(i + 1, total);
+            emit nodesUpdated(displayList, nodeList); // 每测速一个节点就更新 UI
+        }
     });
-
-    QFutureWatcher<int>* watcher = new QFutureWatcher<int>(this);
-
-    connect(watcher, &QFutureWatcher<int>::progressValueChanged,
-            this, [=](int v) {
-        emit speedProgress(v, total);
-    });
-
-    connect(watcher, &QFutureWatcher<int>::finished, this, [=]() {
-        emit speedFinished();
-        watcher->deleteLater();
-    });
-
-    watcher->setFuture(future);
 }
 
+// void Backend::loadSubscription(const QString& url) {
+//     QByteArray raw = httpGet(url);
+//
+//     nodes.clear();
+//
+//     QByteArray decoded = QByteArray::fromBase64(raw);
+//     QString text = QString::fromUtf8(decoded);
+//
+//     for (auto line : text.split("\n")) {
+//         line = line.trimmed();
+//         if (line.isEmpty()) continue;
+//
+//         nodes.append(parse(line));
+//     }
+//
+//     QStringList list;
+//     for (auto& n : nodes)
+//         list << n.name + " (" + n.server + ")";
+//
+//     emit nodesUpdated(list);
+// }
 void Backend::loadSubscription(const QString& url) {
-    QByteArray raw = httpGet(url);
-
-    nodes.clear();
-
-    QByteArray decoded = QByteArray::fromBase64(raw);
-    QString text = QString::fromUtf8(decoded);
-
-    for (auto line : text.split("\n")) {
-        line = line.trimmed();
-        if (line.isEmpty()) continue;
-
-        nodes.append(parse(line));
-    }
-
-    QStringList list;
-    for (auto& n : nodes)
-        list << n.name + " (" + n.server + ")";
-
-    emit nodesUpdated(list);
+    QUrl qurl(url);
+    QNetworkRequest request(qurl);
+    manager.get(request); // 异步
 }
+
 QByteArray httpGet(QString url) {
     QNetworkAccessManager mgr;
     QEventLoop loop;
