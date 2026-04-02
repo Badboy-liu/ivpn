@@ -10,19 +10,20 @@
 #include <QUrlQuery>
 
 
-
-struct Node {
-    QString type;      // vless / vmess / trojan / ss / ssr / hysteria / tuic / wg
-
+class  Node : public QObject
+{
+    Q_OBJECT
+    public:
+    QString type; // vless / vmess / trojan / ss / ssr / hysteria / tuic / wg
     QString name;
     QString server;
     int port = 0;
     int latency = -1; // 默认未测速
     QString uuid;
     QString password;
-    QString method;    // ss 用
+    QString method; // ss 用
 
-    QString network;   // ws / tcp / grpc
+    QString network; // ws / tcp / grpc
     QString path;
     QString host;
 
@@ -31,31 +32,52 @@ struct Node {
 
     // 额外字段
     QMap<QString, QString> extra;
+
+    Q_PROPERTY(QString name MEMBER name)
+    Q_PROPERTY(QString server MEMBER server)
+    Q_PROPERTY(QString uuid MEMBER uuid)
+    Q_PROPERTY(int latency MEMBER latency)
 };
 
 
 // 只声明
 QString detectType(const QString &url);
 
-Node parseSS(const QString &url);
-Node parseVmess(const QString &url);
-Node parseTrojan(const QString &url);
-Node parseVless(const QString &url);
-Node parseSSR(const QString &url);
-Node parseHysteria2(const QString &url);
-Node parseTuic(const QString &url);
-Node parseWireGuard(const QString &url);
-QString toWG(const Node& n);
-QString toTuic(const Node& n) ;
-Node parseNode(const QString &url);
-QString toHy(const Node& n);
-QString toSS(const Node &n);
-QString toHy2(const Node& n);
-QString toSSR(const Node& n) ;
-QString toVless(const Node& n);
-QString toVmess(const Node &n);
-QString toTrojan(const Node &n);
+std::shared_ptr<Node> parseSS(const QString &url);
 
+std::shared_ptr<Node> parseVmess(const QString &url);
+
+std::shared_ptr<Node> parseTrojan(const QString &url);
+
+std::shared_ptr<Node> parseVless(const QString &url);
+
+std::shared_ptr<Node> parseSSR(const QString &url);
+
+std::shared_ptr<Node> parseHysteria2(const QString &url);
+
+std::shared_ptr<Node> parseTuic(const QString &url);
+
+std::shared_ptr<Node> parseWireGuard(const QString &url);
+
+QString toWG(std::shared_ptr<Node> n);
+
+QString toTuic(std::shared_ptr<Node> n);
+
+std::shared_ptr<Node> parseNode(const QString &url);
+
+QString toHy(std::shared_ptr<Node> n);
+
+QString toSS(std::shared_ptr<Node> n);
+
+QString toHy2(std::shared_ptr<Node> n);
+
+QString toSSR(std::shared_ptr<Node> n);
+
+QString toVless(std::shared_ptr<Node> n);
+
+QString toVmess(std::shared_ptr<Node> n);
+
+QString toTrojan(std::shared_ptr<Node> n);
 
 
 #endif //IVPN_NODE_H

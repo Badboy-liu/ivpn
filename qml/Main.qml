@@ -17,18 +17,19 @@ ApplicationWindow {
         hideTimer.start()
     }
 
-    property string currentNode: ""
+    // property string currentNode: ""
+    property var currentNodeObj: null
+    property string currentNodeKey: ""  // 存节点的唯一标识
     Connections {
         target: backend
         // 然后函数里只控制 Timer 和文字
 
-        function onNodesUpdated(list,nodeList) {
+        function onNodesUpdated() {
             listView.model = list
-            if(list.length > 0) {
-                currentNode = list[0]
-                qrImage.source = backend.genQr(list[0]) + "&t=" + Date.now()
-            }
-            input.text = nodeList.join("\n");
+            // if(list.length > 0) {
+            //     currentNode = list[0]
+            //     qrImage.source = backend.genQr(list[0]) + "&t=" + Date.now()
+            // }
         }
 
         function onSpeedProgress(cur, total) {
@@ -98,6 +99,26 @@ ApplicationWindow {
                     showMessage("打开浏览器")
                 }
             }
+            Button {
+                text: "启动本地代理"
+                onClicked: {
+                    if (!currentNodeObj) {
+                        showMessage("请选择主节点")
+                        return
+                    }
+
+                    backend.startLocalProxy(currentNodeObj, 1080, listView.mixinKeys)
+                    showMessage("本地混合代理已启动：127.0.0.1:1080")
+                }
+            }
+
+            Button {
+                text: "停止代理"
+                onClicked: {
+                    backend.stopLocalProxy()
+                    showMessage("本地代理已停止")
+                }
+            }
         }
         ProgressBar {
             id: progress
@@ -149,7 +170,7 @@ ApplicationWindow {
                         qrImage.source = backend.genQr(lines[0]) + "&t=" + Date.now()
                     }
 
-                    listView.model = lines
+                    listView.model = backend.convertNode(input.text, target.currentText);
                 }
             }
         }
@@ -174,7 +195,9 @@ ApplicationWindow {
                     anchors.margins: 6
                     spacing: 6
                     clip: true
-                    model: []
+                    model: backend.nodeModel
+
+                    property var mixinKeys: []
 
                     delegate: Rectangle {
                         width: listView.width
@@ -183,24 +206,38 @@ ApplicationWindow {
                         color: ListView.isCurrentItem ? "#d0e6ff" : "white"
                         border.color: "#ddd"
 
-                        Text {
-                            id: textItem
-                            anchors.left: parent.left
-                            anchors.right: parent.right
-                            anchors.margins: 6
-                            text: modelData
-                            wrapMode: Text.Wrap
-                            font.pixelSize: 12
-                            textFormat: Text.RichText   // 允许显示 HTML
+                        RowLayout {
+                            anchors.fill: parent
+                            spacing: 6
 
+                            CheckBox {
+                                id: check
+                                checked: false
+                                onCheckedChanged: {
+                                    if (checked) {
+                                        if (mixinKeys.indexOf(uuid) === -1)
+                                            mixinKeys.push(uuid)
+                                    } else {
+                                        var idx = mixinKeys.indexOf(uuid)
+                                        if (idx !== -1) mixinKeys.splice(idx, 1)
+                                    }
+                                }
+                            }
+
+                            Text {
+                                id: textItem
+                                text: name + " [" + latency + "ms]"
+                                wrapMode: Text.Wrap
+                                font.pixelSize: 12
+                            }
                         }
 
                         MouseArea {
                             anchors.fill: parent
                             onClicked: {
                                 listView.currentIndex = index
-                                currentNode = modelData
-                                qrImage.source = backend.genQr(modelData) + "&t=" + Date.now()
+                                currentNodeObj = backend.nodeModel.getNode(index)
+                                qrImage.source = backend.genQr(currentNodeObj) + "&t=" + Date.now()
                             }
                         }
                     }
@@ -228,7 +265,7 @@ ApplicationWindow {
                     }
 
                     Label {
-                        text: currentNode === "" ? "请选择节点" : "二维码"
+                        text: currentNodeKey === "" ? "请选择节点" : "二维码"
                         Layout.fillWidth: true
                         horizontalAlignment: Text.AlignHCenter
                     }

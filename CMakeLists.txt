@@ -32,6 +32,8 @@ qt_add_executable(${PROJECT_NAME}
         core/QRProvider.h
         core/http_utils.cpp
         core/http_utils.h
+        core/NodeModel.cpp
+        core/NodeModel.h
 )
 
 qt_add_qml_module(${PROJECT_NAME}
