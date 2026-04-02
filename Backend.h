@@ -7,7 +7,11 @@
 #include <qobjectdefs.h>
 #include <QString>
 #include <qtmetamacros.h>
-
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QByteArray>
+#include <QDesktopServices>
+#include <QTcpServer>
 #include "core/node.h"
 #include "core/QRCodeGen.h"
 #include "core/NodeParser.h"
@@ -33,7 +37,8 @@ public:
         connect(&manager, &QNetworkAccessManager::finished,
                 this, &Backend::onReplyFinished);
     }
-
+    Q_INVOKABLE void startLocalServer(int port);
+    Q_INVOKABLE void openUrl();
     Q_INVOKABLE QString convert(QString input, QString target);
     Q_INVOKABLE QString genQr(const QString& text);
 

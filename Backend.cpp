@@ -39,6 +39,44 @@ QString Backend::convert(QString input, QString target) {
     return results.join("\n");
 }
 
+
+void Backend::startLocalServer(int port)
+{
+
+    QTcpServer* server = new QTcpServer(this);
+    connect(server, &QTcpServer::newConnection, [this, server]() {
+        QTcpSocket *socket = server->nextPendingConnection();
+
+        QStringList nodeStrings;
+        for (auto &n : nodes)
+            nodeStrings << toVmess(n); // 或 toVless / toTrojan
+
+        QByteArray allNodes = nodeStrings.join("\n").toUtf8().toBase64();
+
+        QByteArray response = "HTTP/1.1 200 OK\r\n"
+                              "Content-Type: text/plain\r\n"
+                              "Content-Length: " + QByteArray::number(allNodes.size()) + "\r\n"
+                              "\r\n" +
+                              allNodes;
+
+        socket->write(response);
+        socket->flush();
+        socket->disconnectFromHost();
+    });
+
+    if (!server->listen(QHostAddress::LocalHost, port)) {
+        qWarning() << "Failed to start local server on port" << port;
+    } else {
+        qDebug() << "Local node server started at http://127.0.0.1:" << port;
+    }
+}
+
+void Backend::openUrl() {
+    // 打开默认浏览器访问
+    QUrl url("http://127.0.0.1:" + QString::number(12345));
+    QDesktopServices::openUrl(url);
+}
+
 QString Backend::genQr(const QString& text)
 {
     return QRCodeGen::generateBase64(text);

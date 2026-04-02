@@ -10,10 +10,17 @@ ApplicationWindow {
     visible: true
     title: "IVPN Tool"
     color: "#f0f2f5"
+    function showMessage(msg, duration = 2000) {
+        statusLabel.text = msg
+        statusBg.visible = true
+        hideTimer.interval = duration
+        hideTimer.start()
+    }
 
     property string currentNode: ""
     Connections {
         target: backend
+        // 然后函数里只控制 Timer 和文字
 
         function onNodesUpdated(list,nodeList) {
             listView.model = list
@@ -55,14 +62,41 @@ ApplicationWindow {
                 implicitHeight: 30 // 或根据需要调整
             }
 
+        }
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 10
+
             Button {
                 text: "加载订阅"
-                onClicked: backend.loadSubscription(subUrl.text)
+                onClicked: {
+                    backend.loadSubscription(subUrl.text)
+                    // 显示消息
+                    showMessage("加载订阅中！")
+                }
             }
 
             Button {
                 text: "测速"
-                onClicked: backend.startSpeedTest()
+                onClicked: {
+                    backend.startSpeedTest()
+                    showMessage("测速中！")
+
+                }
+            }
+            Button {
+                text: "启动本地节点服务"
+                onClicked: {
+                    backend.startLocalServer(12345)  // 本地端口 12345
+                    showMessage("开启端口12345")
+                }
+            }
+            Button {
+                text: "打开浏览器"
+                onClicked: {
+                    backend.openUrl()  // 本地端口 12345
+                    showMessage("打开浏览器")
+                }
             }
         }
         ProgressBar {
@@ -206,6 +240,35 @@ ApplicationWindow {
         TextArea {
             id: output
             visible: false
+        }
+    }
+
+    Rectangle {
+        id: statusBg
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        height: 30
+        color: "#4CAF50"
+        radius: 5
+        visible: false
+
+        Label {
+            id: statusLabel
+            anchors.centerIn: parent
+            color: "white"
+            font.pixelSize: 14
+            text: ""
+        }
+
+        Timer {
+            id: hideTimer
+            interval: 2000
+            repeat: false
+            onTriggered: {
+                statusBg.visible = false
+                statusLabel.text = ""
+            }
         }
     }
 }
