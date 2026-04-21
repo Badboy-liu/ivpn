@@ -12,9 +12,8 @@ find_package(Qt6 COMPONENTS
         Concurrent
         REQUIRED)
 find_package(yaml-cpp CONFIG REQUIRED)
-find_package(ZXing REQUIRED)
+find_package(ZXing CONFIG REQUIRED)
 find_package(OpenSSL REQUIRED)
-
 
 
 qt_policy(SET QTP0001 NEW)

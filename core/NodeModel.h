@@ -31,14 +31,14 @@ public:
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
     QHash<int, QByteArray> roleNames() const override;
-    void addNode(const std::shared_ptr<Node>& node) ;
-
+    void addNode(Node* node) ;
+    void updateNode(int row);
     // 设置节点列表
-    void setNodes(const QList<std::shared_ptr<Node>>& nodeList);
-    std::shared_ptr<Node> getNode(int index) const;
+    void setNodes(const QList<Node*> nodeList);
+    Q_INVOKABLE Node* getNode(int index) const;
 
-private:
-    QList<std::shared_ptr<Node>> m_nodes;
+public:
+    QList<Node*> m_nodes;
 };
 
 

@@ -29,11 +29,9 @@ QImage QRCodeGen::generate(const QString& text)
 }
 
 #include "QRCodeGen.h"
-#include <ZXing/MultiFormatWriter.h>
-#include <ZXing/BitMatrix.h>
+
 #include <QImage>
 #include <QBuffer>
-
 using namespace ZXing;
 
 QString QRCodeGen::generateBase64(const QString& text)

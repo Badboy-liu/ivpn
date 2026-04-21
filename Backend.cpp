@@ -3,13 +3,66 @@
 //
 
 #include "Backend.h"
-#include "Backend.h"
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QDebug>
-#include <QFile>
 
+
+
+void Backend::onReplyFinished(QNetworkReply* reply)
+{
+    QByteArray raw = reply->readAll();
+    reply->deleteLater();
+
+    nodes.clear();
+    QByteArray::FromBase64Result result = QByteArray::fromBase64Encoding(
+         raw,
+         QByteArray::AbortOnBase64DecodingErrors);
+
+    QString text = QString::fromUtf8(result.decoded);
+
+    m_nodeModel->setNodes(parseNodeList(text));
+
+}
+
+
+QList<Node*> Backend::parseNodeList(QString& content)
+{
+    QList<Node*> nodes;
+    if (content.contains("proxies:") || content.contains("proxies:"))
+    {
+
+
+        // YAML::Node yml = YAML::Load(yamlStr);
+        YAML::Node root = YAML::Load(content.toStdString());
+        YAML::Node ps = root["proxies"];
+        if (!ps.IsNull())
+        {
+            for (const auto& item : ps)
+            {
+                auto node = parseNode(item);
+                nodeMap.insert(node->uuid, node);
+                nodes.append(node);
+            }
+        }
+    }else
+    {
+
+
+        for (auto line : content.split("\n")) {
+            line = line.trimmed();
+            if (line.isEmpty()) continue;
+            Node* node = parse(line);
+            nodes.append(node);
+            QString key = node->uuid;
+            if (key.isEmpty()) {
+                key = QUuid::createUuid().toString(QUuid::WithoutBraces); // 生成 UUID，不带花括号
+            }
+            nodeModel()->addNode(node);
+            nodeMap.insert(key, node);
+            // nodes.append(node);
+            // nodeMap.insert(node.uuid, node);
+        }
+    }
+    return nodes;
+};
 
 QString Backend::writeConfig(const Node &node, quint16 port, const QStringList &mixinNodeKeys ) {
     QJsonObject config;
@@ -50,7 +103,7 @@ QString Backend::writeConfig(const Node &node, quint16 port, const QStringList &
     // ===== mixin 节点 =====
     for (const QString &key : mixinNodeKeys) {
         if (!nodeMap.contains(key)) continue;
-        std::shared_ptr<Node> mNode = nodeMap.value(key);
+        Node *mNode = nodeMap.value(key);
 
         QJsonObject mixClient;
         mixClient["type"] = mNode->type;
@@ -124,54 +177,68 @@ void Backend::stopLocalProxy() {
     }
 }
 
-std::shared_ptr<Node> Backend::parse(const QString& link) {
-    std::shared_ptr<Node> node = parseNode(link);
+Node* Backend::parse(const QString& link) {
+    Node* node = parseNode(link);
     return node;
 }
 
 // Backend.cpp
 QString Backend::convert(QString input, QString target) {
+
     QStringList lines = input.split("\n",Qt::SkipEmptyParts);
-    QStringList results;
+    QList<Node*> nodes;
 
-    for (auto line : lines)
+    if (input.trimmed().isEmpty())
     {
-        std::shared_ptr<Node> node = parseNode(line);
-
-        QString out;
-
-        if (target == "vmess") out =  toVmess(node);
-        if (target == "vless") out =   toVless(node);
-        if (target == "trojan") out =   toTrojan(node);
-        if (target == "ss") out =   toSS(node);
-        if (target == "ssr") out =   toSSR(node);
-        if (target == "hysteria2") out =   toHy2(node);
-        if (target == "hysteria") out =   toHy(node);
-        if (target == "tuic") out =   toTuic(node);
-        if (target == "wireguard") out =   toWG(node);
-        // qDebug() << "line:" << line;
-        // qDebug() << "host:" << n.host;
-        // qDebug() << "port:" << n.port;
-        // qDebug() << "id:" << n.name;
-        results.append(out);
+        nodes = this->m_nodeModel->m_nodes;
+    }else
+    {
+        nodes = parseNodeList(input);
     }
+    QStringList results;
+    if (!nodes.isEmpty())
+    {
 
+        for (auto node : nodes)
+        {
+            if (target=="vmess")
+            {
+                results.append(toVmess(node));
+            }else if (target == "vless")
+            {
+                results.append(toVmess(node));
+            }else if (target == "wg")
+            {
+                results.append(toWG(node));
+            }else if (target == "tuic")
+            {
+                results.append(toTuic(node));
+            }else if (target == "hy")
+            {
+                results.append(toHy(node));
+            }else if (target == "ss")
+            {
+                results.append(toSS(node));
+            }else if (target == "hy2")
+            {
+                results.append(toHy2(node));
+            }else if (target == "ssr")
+            {
+                results.append(toSSR(node));
+            }else if (target == "trojan")
+            {
+                results.append(toTrojan(node));
+            }
+        }
+
+    }
+    m_nodeModel->setNodes(nodes);
     return results.join("\n");
 }
 
-QList<Node*> Backend::convertNode(QString input, QString target) {
-    QStringList lines = input.split("\n",Qt::SkipEmptyParts);
-
-    QList<Node*> nodes;
-    for (auto line : lines)
-    {
-        std::shared_ptr<Node> node = parseNode(line);
-
-        nodes.append(node.get());
-    }
-
-    return nodes;
-}
+// QString Backend::convertNode(QString input, QString target) {
+//
+// }
 
 
 void Backend::openUrl() {
@@ -180,11 +247,11 @@ void Backend::openUrl() {
     QDesktopServices::openUrl(url);
 }
 
-QString Backend::genQr(std::shared_ptr<Node> node)
+QString Backend::genQr(Node* node)
 {
     return QRCodeGen::generateBase64(toVmess(node));
 }
-int Backend::testLatency(const std::shared_ptr<Node>&n) {
+int Backend::testLatency(const Node* n) {
     QTcpSocket socket;
     QElapsedTimer timer;
 
@@ -197,17 +264,17 @@ int Backend::testLatency(const std::shared_ptr<Node>&n) {
         return ms;
     }
 
-    return 9999;
+    return -1;
 }
 
 void Backend::startSpeedTest() {
     qDebug() << "Start speedtest";
     QtConcurrent::run([this]() {
-        int total = nodes.size();
+        int total = m_nodeModel->m_nodes.size();
         for (int i = 0; i < total; ++i) {
-            int ms = testLatency(nodes[i]);
+            int ms = testLatency(m_nodeModel->m_nodes[i]);
 
-            nodes[i]->latency = ms;
+            m_nodeModel->m_nodes[i]->latency = ms;
 
             // 更新节点名称显示
             // QStringList displayList;
@@ -221,9 +288,44 @@ void Backend::startSpeedTest() {
             // }
 
             emit speedProgress(i + 1, total);
-            emit nodesUpdated(); // 每测速一个节点就更新 UI
+             // 每测速一个节点就更新 UI
+            // emit nodesUpdated(m_nodeModel->m_nodes);
         }
+
+        emit latencyReady();
     });
+    // m_nodeModel->setNodes(m_nodeModel->m_nodes);
+}
+
+void Backend::startLocalServer(int port)
+{
+
+    QTcpServer* server = new QTcpServer(this);
+    connect(server, &QTcpServer::newConnection, [this, server]() {
+        QTcpSocket *socket = server->nextPendingConnection();
+
+        QStringList nodeStrings;
+        for (auto &n : m_nodeModel->m_nodes)
+            nodeStrings << toVmess(n); // 或 toVless / toTrojan
+
+        QByteArray allNodes = nodeStrings.join("\n").toUtf8().toBase64();
+
+        QByteArray response = "HTTP/1.1 200 OK\r\n"
+                              "Content-Type: text/plain\r\n"
+                              "Content-Length: " + QByteArray::number(allNodes.size()) + "\r\n"
+                              "\r\n" +
+                              allNodes;
+
+        socket->write(response);
+        socket->flush();
+        socket->disconnectFromHost();
+    });
+
+    if (!server->listen(QHostAddress::LocalHost, port)) {
+        qWarning() << "Failed to start local server on port" << port;
+    } else {
+        qDebug() << "Local node server started at http://127.0.0.1:" << port;
+    }
 }
 
 // void Backend::loadSubscription(const QString& url) {
@@ -266,8 +368,8 @@ QByteArray httpGet(QString url) {
 
 
 
-void Backend::loadNodes(const QList<std::shared_ptr<Node>>& nodes)
+void Backend::loadNodes(const QList<Node*> nodes)
 {
     m_nodeModel->setNodes(nodes);
-    emit nodesUpdated();
+    // emit nodesUpdated();
 }

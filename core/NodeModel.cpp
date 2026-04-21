@@ -18,7 +18,7 @@ QVariant NodeModel::data(const QModelIndex &index, int role) const
     if (!index.isValid() || index.row() < 0 || index.row() >= m_nodes.size())
         return {};
 
-    auto node = m_nodes[index.row()];
+    Node* node = m_nodes[index.row()];
 
     switch (role) {
         case NameRole: return node->name;
@@ -45,19 +45,24 @@ QHash<int, QByteArray> NodeModel::roleNames() const
     return roles;
 }
 
-void NodeModel::setNodes(const QList<std::shared_ptr<Node>> &nodeList)
+void NodeModel::setNodes(const QList<Node*> nodeList)
 {
     beginResetModel();
     m_nodes = nodeList;
     endResetModel();
 }
-void NodeModel::addNode(const std::shared_ptr<Node>& node)
+void NodeModel::updateNode(int row)
+{
+    QModelIndex idx = index(row);
+    emit dataChanged(idx, idx);
+}
+void NodeModel::addNode(Node* node)
 {
     beginInsertRows(QModelIndex(), m_nodes.size(), m_nodes.size());
     m_nodes.append(node);
     endInsertRows();
 }
-std::shared_ptr<Node> NodeModel::getNode(int index) const
+Node* NodeModel::getNode(int index) const
 {
     if (index < 0 || index >= m_nodes.size()) return nullptr;
     return m_nodes[index];

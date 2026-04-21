@@ -4,6 +4,9 @@
 
 #include "node.h"
 
+
+
+
 QString detectType(const QString& link)
 {
     if (link.startsWith("vless://")) return "vless";
@@ -17,7 +20,7 @@ QString detectType(const QString& link)
     if (link.startsWith("wg://")) return "wireguard";
     return "";
 }
-QString toVless(std::shared_ptr<Node> n) {
+QString toVless(Node*n) {
     QString url = "vless://" + n->uuid + "@" + n->server + ":" + QString::number(n->port);
 
     QUrlQuery query;
@@ -32,7 +35,7 @@ QString toVless(std::shared_ptr<Node> n) {
 
     return url + "?" + query.toString() + "#" + n->name;
 }
-QString toHy2(std::shared_ptr<Node> n) {
+QString toHy2(Node*n) {
     QString url = "hy2://" + n->password + "@" + n->server + ":" + QString::number(n->port);
 
     QUrlQuery query;
@@ -40,7 +43,7 @@ QString toHy2(std::shared_ptr<Node> n) {
 
     return url + "?" + query.toString() + "#" + n->name;
 }
-QString toWG(std::shared_ptr<Node> n) {
+QString toWG(Node*n) {
     QString url = "wg://" + n->server + ":" + QString::number(n->port);
 
     QUrlQuery query;
@@ -49,7 +52,7 @@ QString toWG(std::shared_ptr<Node> n) {
 
     return url + "?" + query.toString();
 }
-QString toTuic(std::shared_ptr<Node> n) {
+QString toTuic(Node*n) {
     QString url = "tuic://" + n->uuid + ":" + n->password + "@"
         + n->server + ":" + QString::number(n->port);
 
@@ -58,7 +61,7 @@ QString toTuic(std::shared_ptr<Node> n) {
 
     return url + "?" + query.toString() + "#" + n->name;
 }
-QString toHy(std::shared_ptr<Node> n) {
+QString toHy(Node*n) {
     QString url = "hysteria://" + n->server + ":" + QString::number(n->port);
 
     QUrlQuery query;
@@ -66,7 +69,7 @@ QString toHy(std::shared_ptr<Node> n) {
 
     return url + "?" + query.toString();
 }
-QString toSSR(std::shared_ptr<Node> n) {
+QString toSSR(Node* n) {
     QString base = QString("%1:%2:origin:%3:plain:%4")
         .arg(n->server)
         .arg(n->port)
@@ -79,12 +82,12 @@ QString toSSR(std::shared_ptr<Node> n) {
 
     return "ssr://" + all.toUtf8().toBase64();
 }
-std::shared_ptr<Node> parseVless(const QString& link)
+Node* parseVless(const QString& link)
 {
     QUrl url(link);
     QUrlQuery q(url);
 
-    auto n = std::make_shared<Node>();
+    auto n =new  Node();
     n->type = "vless";
     n->uuid = url.userName();
     n->server = url.host();
@@ -99,14 +102,14 @@ std::shared_ptr<Node> parseVless(const QString& link)
     return n;
 }
 
-std::shared_ptr<Node> parseVmess(const QString& link)
+Node*parseVmess(const QString& link)
 {
     QString base64 = link.mid(8);
     QByteArray decoded = QByteArray::fromBase64(base64.toUtf8());
 
     QJsonObject o = QJsonDocument::fromJson(decoded).object();
 
-    auto n = std::make_shared<Node>();
+    auto n = new Node();
 
     n->type = "vmess";
     n->server = o["add"].toString();
@@ -121,12 +124,60 @@ std::shared_ptr<Node> parseVmess(const QString& link)
 
     return n;
 }
-std::shared_ptr<Node> parseTrojan(const QString& link)
+template<typename T>
+T getOrDefault(const YAML::Node& node, const std::string& key, const T& def) {
+    if (node[key])
+        return node[key].as<T>();
+    return def;
+}
+Node*parseNode(const YAML::Node& proxy) {
+    auto n = new Node();
+
+    n->type = QString::fromStdString(getOrDefault(proxy, "type", std::string("")));
+    n->name = QString::fromStdString(getOrDefault(proxy, "name", std::string("")));
+    n->server = QString::fromStdString(getOrDefault(proxy, "server", std::string("")));
+    n->port = getOrDefault(proxy, "port", 0);
+
+    // 通用字段
+    n->uuid = QString::fromStdString(getOrDefault(proxy, "uuid", std::string("")));
+    n->password = QString::fromStdString(getOrDefault(proxy, "password", std::string("")));
+    n->method = QString::fromStdString(getOrDefault(proxy, "cipher", std::string("")));
+
+    n->network = QString::fromStdString(getOrDefault(proxy, "network", std::string("")));
+    n->tls = getOrDefault(proxy, "tls", false);
+    n->sni = QString::fromStdString(getOrDefault(proxy, "sni", std::string("")));
+
+    // ws
+    if (proxy["ws-opts"]) {
+        auto ws = proxy["ws-opts"];
+        n->path = QString::fromStdString(getOrDefault(ws, "path", std::string("")));
+        if (ws["headers"] && ws["headers"]["Host"])
+            n->host = QString::fromStdString(ws["headers"]["Host"].as<std::string>());
+    }
+
+    // reality / grpc / 其他 → 丢到 extra
+    QStringList keys = {
+        "uuid", "password", "cipher", "network",
+        "path", "host", "sni", "flow"
+    };
+
+    for (const auto& k : keys) {
+        if (proxy[k.toStdString()]) {
+            const auto& value = proxy[k.toStdString()];
+            if (value.IsScalar()) {
+                n->extra[k] = QString::fromStdString(value.as<std::string>());
+            }
+        }
+    }
+
+    return n;
+}
+Node*parseTrojan(const QString& link)
 {
     QUrl url(link);
     QUrlQuery q(url);
 
-    auto n = std::make_shared<Node>();
+    auto n = new Node();
 
     n->type = "trojan";
     n->password = url.userName();
@@ -139,9 +190,9 @@ std::shared_ptr<Node> parseTrojan(const QString& link)
 
     return n;
 }
-std::shared_ptr<Node> parseSS(const QString& link)
+Node* parseSS(const QString& link)
 {
-    auto n = std::make_shared<Node>();
+    auto n = new Node();
 
     n->type = "ss";
 
@@ -167,14 +218,14 @@ std::shared_ptr<Node> parseSS(const QString& link)
 
     return n;
 }
-std::shared_ptr<Node> parseSSR(const QString& link)
+Node*parseSSR(const QString& link)
 {
     QString base64 = link.mid(6);
     QString decoded = QString::fromUtf8(QByteArray::fromBase64(base64.toUtf8()));
 
     QStringList parts = decoded.split(":");
 
-    auto n = std::make_shared<Node>();
+    auto n = new Node();
 
     n->type = "ssr";
     n->server = parts[0];
@@ -184,12 +235,12 @@ std::shared_ptr<Node> parseSSR(const QString& link)
 
     return n;
 }
-std::shared_ptr<Node> parseHysteria2(const QString& link)
+Node*parseHysteria2(const QString& link)
 {
     QUrl url(link);
     QUrlQuery q(url);
 
-    auto n = std::make_shared<Node>();
+    auto n = new Node();
 
     n->type = "hysteria2";
     n->server = url.host();
@@ -199,12 +250,12 @@ std::shared_ptr<Node> parseHysteria2(const QString& link)
 
     return n;
 }
-std::shared_ptr<Node> parseTuic(const QString& link)
+Node*parseTuic(const QString& link)
 {
     QUrl url(link);
     QUrlQuery q(url);
 
-    auto n = std::make_shared<Node>();
+    auto n = new Node();
 
     n->type = "tuic";
     n->uuid = url.userName();
@@ -216,7 +267,7 @@ std::shared_ptr<Node> parseTuic(const QString& link)
 
     return n;
 }
-std::shared_ptr<Node> parseWireGuard(const QString& link)
+Node*parseWireGuard(const QString& link)
 {
     // wg://base64(json)
     QString base64 = link.mid(5);
@@ -224,7 +275,7 @@ std::shared_ptr<Node> parseWireGuard(const QString& link)
 
     QJsonObject o = QJsonDocument::fromJson(decoded).object();
 
-    auto n = std::make_shared<Node>();
+    Node* n = new Node();
 
     n->type = "wireguard";
     n->server = o["server"].toString();
@@ -234,7 +285,7 @@ std::shared_ptr<Node> parseWireGuard(const QString& link)
 
     return n;
 }
-std::shared_ptr<Node> parse(const QString& link)
+Node*parse(const QString& link)
 {
     QString type = detectType(link);
 
@@ -249,7 +300,7 @@ std::shared_ptr<Node> parse(const QString& link)
 
     return {};
 }
-QString toVmess(std::shared_ptr<Node> n) {
+QString toVmess(Node*n) {
     QJsonObject obj;
     obj["v"] = "2";
     obj["ps"] = "converted";
@@ -267,19 +318,19 @@ QString toVmess(std::shared_ptr<Node> n) {
 
     return "vmess://" + json.toBase64();
 }
-QString toSS(std::shared_ptr<Node> n) {
+QString toSS(Node*n) {
     QString raw = n->method + ":" + n->password + "@" +
                   n->server + ":" + QString::number(n->port);
 
     return "ss://" + raw.toUtf8().toBase64();
 }
-QString toTrojan(std::shared_ptr<Node> n) {
+QString toTrojan(Node*n) {
     return QString("trojan://%1@%2:%3?security=tls")
         .arg(n->password)
         .arg(n->server)
         .arg(n->port);
 }
-std::shared_ptr<Node> parseNode(const QString &url) {
+Node*parseNode(const QString &url) {
     if (url.startsWith("ss://")) return parseSS(url);
     if (url.startsWith("vmess://")) return parseVmess(url);
     if (url.startsWith("vless://")) return parseVless(url);

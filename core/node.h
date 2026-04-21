@@ -8,7 +8,7 @@
 #include <QUrl>
 #include <QJsonObject>
 #include <QUrlQuery>
-
+#include <yaml-cpp/yaml.h>
 
 class  Node : public QObject
 {
@@ -42,42 +42,42 @@ class  Node : public QObject
 
 // 只声明
 QString detectType(const QString &url);
+Node* parseNode(const YAML::Node& proxy);
+Node* parseSS(const QString &url);
 
-std::shared_ptr<Node> parseSS(const QString &url);
+Node* parseVmess(const QString &url);
 
-std::shared_ptr<Node> parseVmess(const QString &url);
+Node* parseTrojan(const QString &url);
 
-std::shared_ptr<Node> parseTrojan(const QString &url);
+Node* parseVless(const QString &url);
 
-std::shared_ptr<Node> parseVless(const QString &url);
+Node* parseSSR(const QString &url);
 
-std::shared_ptr<Node> parseSSR(const QString &url);
+Node* parseHysteria2(const QString &url);
 
-std::shared_ptr<Node> parseHysteria2(const QString &url);
+Node* parseTuic(const QString &url);
 
-std::shared_ptr<Node> parseTuic(const QString &url);
+Node* parseWireGuard(const QString &url);
 
-std::shared_ptr<Node> parseWireGuard(const QString &url);
+QString toWG(Node* n);
 
-QString toWG(std::shared_ptr<Node> n);
+QString toTuic(Node* n);
 
-QString toTuic(std::shared_ptr<Node> n);
+Node* parseNode(const QString &url);
 
-std::shared_ptr<Node> parseNode(const QString &url);
+QString toHy(Node* n);
 
-QString toHy(std::shared_ptr<Node> n);
+QString toSS(Node* n);
 
-QString toSS(std::shared_ptr<Node> n);
+QString toHy2(Node* n);
 
-QString toHy2(std::shared_ptr<Node> n);
+QString toSSR(Node* n);
 
-QString toSSR(std::shared_ptr<Node> n);
+QString toVless(Node* n);
 
-QString toVless(std::shared_ptr<Node> n);
+QString toVmess(Node* n);
 
-QString toVmess(std::shared_ptr<Node> n);
-
-QString toTrojan(std::shared_ptr<Node> n);
+QString toTrojan(Node* n);
 
 
 #endif //IVPN_NODE_H

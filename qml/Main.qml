@@ -162,15 +162,15 @@ ApplicationWindow {
                 Layout.preferredWidth: 120
 
                 onClicked: {
-                    output.text = backend.convert(input.text, target.currentText)
+                    input.text = backend.convert(input.text, target.currentText)
+                    console.log("output.text"+output.text)
+                    // var lines = output.text.split(/\r?\n/).filter(s => s.length > 0)
+                    // if (lines.length > 0) {
+                    //     // currentNode = lines[0]
+                    //     qrImage.source = backend.genQr(lines[0]) + "&t=" + Date.now()
+                    // }
 
-                    var lines = output.text.split(/\r?\n/).filter(s => s.length > 0)
-                    if (lines.length > 0) {
-                        currentNode = lines[0]
-                        qrImage.source = backend.genQr(lines[0]) + "&t=" + Date.now()
-                    }
-
-                    listView.model = backend.convertNode(input.text, target.currentText);
+                    // input.text = backend.convertNode(input.text, target.currentText);
                 }
             }
         }
