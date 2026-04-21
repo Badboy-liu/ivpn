@@ -119,35 +119,6 @@ ApplicationWindow {
                     showMessage("本地代理已停止")
                 }
             }
-        }
-        ProgressBar {
-            id: progress
-            Layout.fillWidth: true
-            from: 0
-            to: 100
-        }
-
-        // ===== 输入框 =====
-        Rectangle {
-            Layout.fillWidth: true
-            Layout.preferredHeight: 140
-            radius: 10
-            color: "white"
-            border.color: "#ccc"
-
-            TextArea {
-                id: input
-                anchors.fill: parent
-                anchors.margins: 10
-                placeholderText: "粘贴节点（多行）"
-                wrapMode: TextArea.Wrap
-            }
-        }
-
-        // ===== 操作栏 =====
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 10
 
             ComboBox {
                 id: target
@@ -174,6 +145,37 @@ ApplicationWindow {
                 }
             }
         }
+        ProgressBar {
+            id: progress
+            Layout.fillWidth: true
+            from: 0
+            to: 100
+        }
+
+        // ===== 输入框 =====
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 140
+            radius: 10
+            color: "white"
+            border.color: "#ccc"
+
+            TextArea {
+                id: input
+                anchors.fill: parent
+                anchors.margins: 10
+                placeholderText: "粘贴节点（多行）"
+                wrapMode: TextArea.Wrap
+            }
+        }
+
+        // // ===== 操作栏 =====
+        // RowLayout {
+        //     Layout.fillWidth: true
+        //     spacing: 10
+        //
+        //
+        // }
 
         // ===== 主区域 =====
         RowLayout {
@@ -246,7 +248,7 @@ ApplicationWindow {
 
             // ===== 右：二维码 =====
             Rectangle {
-                Layout.preferredWidth: 240
+                Layout.preferredWidth: 150
                 Layout.fillHeight: true
                 radius: 10
                 color: "white"
@@ -258,8 +260,8 @@ ApplicationWindow {
 
                     Image {
                         id: qrImage
-                        Layout.preferredWidth: 200
-                        Layout.preferredHeight: 200
+                        Layout.preferredWidth: 100
+                        Layout.preferredHeight: 100
                         fillMode: Image.PreserveAspectFit
                         source: ""
                     }
